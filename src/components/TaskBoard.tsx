@@ -1,9 +1,16 @@
 import React from "react";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import TaskColumn from "./TaskColumn";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateTaskDialog from "./CreateTaskDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const initialColumns = {
   scheduled: {
@@ -62,6 +69,8 @@ const TaskBoard = () => {
   const [tasks, setTasks] = React.useState(initialTasks);
   const [columns, setColumns] = React.useState(initialColumns);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [priorityFilter, setPriorityFilter] = React.useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = React.useState<string>("all");
 
   const handleDragEnd = (result: any) => {
     const { destination, source, draggableId } = result;
@@ -132,6 +141,20 @@ const TaskBoard = () => {
     setIsCreateDialogOpen(false);
   };
 
+  const getFilteredTasks = (columnTasks: any[]) => {
+    return columnTasks.filter((task) => {
+      const matchesPriority =
+        priorityFilter === "all" || task.priority === priorityFilter;
+      const matchesAssignee =
+        assigneeFilter === "all" || task.assignee === assigneeFilter;
+      return matchesPriority && matchesAssignee;
+    });
+  };
+
+  const uniqueAssignees = Array.from(
+    new Set(Object.values(tasks).map((task) => task.assignee))
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -145,13 +168,45 @@ const TaskBoard = () => {
             Add Task
           </Button>
         </div>
+
+        <div className="mb-6 flex gap-4 items-center bg-white p-4 rounded-lg shadow-sm">
+          <Filter className="h-5 w-5 text-gray-500" />
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="high">High Priority</SelectItem>
+              <SelectItem value="medium">Medium Priority</SelectItem>
+              <SelectItem value="low">Low Priority</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignees</SelectItem>
+              {uniqueAssignees.map((assignee) => (
+                <SelectItem key={assignee} value={assignee}>
+                  {assignee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {Object.values(columns).map((column) => (
               <TaskColumn
                 key={column.id}
                 column={column}
-                tasks={column.taskIds.map((taskId) => tasks[taskId])}
+                tasks={getFilteredTasks(
+                  column.taskIds.map((taskId) => tasks[taskId])
+                )}
               />
             ))}
           </div>
