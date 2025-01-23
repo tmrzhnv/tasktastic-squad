@@ -30,7 +30,14 @@ export const useTaskBoard = () => {
       const { data, error } = await supabase
         .from('tasks')
         .select(`
-          *,
+          id,
+          description,
+          status,
+          priority,
+          deadline,
+          user_id,
+          created_at,
+          updated_at,
           profile:profiles(*)
         `)
         .order('created_at', { ascending: false });
