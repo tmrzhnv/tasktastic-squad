@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
-import EditTask from "./pages/EditTask";
+import TaskDetails from "./pages/TaskDetails";
 import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
@@ -58,7 +58,7 @@ const App = () => (
             path="/tasks/:taskId"
             element={
               <ProtectedRoute>
-                <EditTask />
+                <TaskDetails />
               </ProtectedRoute>
             }
           />
