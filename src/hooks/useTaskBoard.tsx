@@ -11,18 +11,18 @@ type Task = Database['public']['Tables']['tasks']['Row'] & {
 
 type TaskStatus = Database['public']['Enums']['task_status'];
 
+type Column = {
+  id: TaskStatus;
+  title: string;
+  taskIds: string[];
+};
+
 export const useTaskBoard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-
-  const columns = {
-    scheduled: { id: 'scheduled' as TaskStatus, title: "Scheduled" },
-    in_progress: { id: 'in_progress' as TaskStatus, title: "In Progress" },
-    completed: { id: 'completed' as TaskStatus, title: "Completed" },
-  };
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
@@ -39,6 +39,33 @@ export const useTaskBoard = () => {
       return data as Task[];
     },
   });
+
+  // Organize tasks by status
+  const tasksByStatus = tasks.reduce((acc, task) => {
+    if (!acc[task.status]) {
+      acc[task.status] = [];
+    }
+    acc[task.status].push(task.id);
+    return acc;
+  }, {} as Record<TaskStatus, string[]>);
+
+  const columns: Record<TaskStatus, Column> = {
+    scheduled: {
+      id: 'scheduled',
+      title: "Scheduled",
+      taskIds: tasksByStatus.scheduled || [],
+    },
+    in_progress: {
+      id: 'in_progress',
+      title: "In Progress",
+      taskIds: tasksByStatus.in_progress || [],
+    },
+    completed: {
+      id: 'completed',
+      title: "Completed",
+      taskIds: tasksByStatus.completed || [],
+    },
+  };
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
