@@ -1,20 +1,18 @@
 import React from "react";
 import { Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
+import { Database } from "@/integrations/supabase/types";
+
+type Task = Database['public']['Tables']['tasks']['Row'] & {
+  profile?: Database['public']['Tables']['profiles']['Row'];
+};
 
 interface TaskColumnProps {
   column: {
-    id: string;
+    id: Database['public']['Enums']['task_status'];
     title: string;
   };
-  tasks: Array<{
-    id: string;
-    title: string;
-    description: string;
-    priority: string;
-    dueDate: string;
-    assignee: string;
-  }>;
+  tasks: Task[];
 }
 
 const TaskColumn: React.FC<TaskColumnProps> = ({ column, tasks }) => {

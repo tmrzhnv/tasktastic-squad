@@ -3,21 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, User } from "lucide-react";
 import { Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
+import { Database } from "@/integrations/supabase/types";
+
+type Task = Database['public']['Tables']['tasks']['Row'] & {
+  profile?: Database['public']['Tables']['profiles']['Row'];
+};
 
 interface TaskCardProps {
-  task: {
-    id: string;
-    title: string;
-    description: string;
-    priority: string;
-    dueDate: string;
-    assignee: string;
-  };
+  task: Task;
   index: number;
 }
 
-const getPriorityColor = (priority: string) => {
-  switch (priority.toLowerCase()) {
+const getPriorityColor = (priority: Database['public']['Enums']['task_priority']) => {
+  switch (priority) {
     case "high":
       return "bg-red-100 text-red-800";
     case "medium":
@@ -42,20 +40,19 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
             <Card className="mb-4 hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-gray-900">{task.title}</h3>
+                  <h3 className="font-medium text-gray-900">{task.description}</h3>
                   <Badge className={getPriorityColor(task.priority)}>
                     {task.priority}
                   </Badge>
                 </div>
-                <p className="text-gray-600 text-sm mb-4">{task.description}</p>
                 <div className="flex items-center justify-between text-gray-500 text-sm">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    <span>{task.assignee}</span>
+                    <span>{task.profile?.name || 'Unassigned'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>{task.dueDate}</span>
+                    <span>{new Date(task.deadline).toLocaleDateString()}</span>
                   </div>
                 </div>
               </CardContent>

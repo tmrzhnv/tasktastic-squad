@@ -6,10 +6,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Database } from "@/integrations/supabase/types";
 
 interface FilterPanelProps {
   priorityFilter: string;
-  setPriorityFilter: (value: string) => void;
+  setPriorityFilter: (value: Database['public']['Enums']['task_priority'] | 'all') => void;
   assigneeFilter: string;
   setAssigneeFilter: (value: string) => void;
   uniqueAssignees: string[];

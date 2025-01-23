@@ -1,173 +1,132 @@
-import React from "react";
+import { useState, useCallback } from "react";
+import { DropResult } from "@hello-pangea/dnd";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import { useToast } from "@/components/ui/use-toast";
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: string;
-  dueDate: string;
-  assignee: string;
-}
-
-interface Column {
-  id: string;
-  title: string;
-  taskIds: string[];
-}
-
-interface TaskState {
-  [key: string]: Task;
-}
-
-interface ColumnState {
-  [key: string]: Column;
-}
-
-const initialColumns = {
-  scheduled: {
-    id: "scheduled",
-    title: "Scheduled",
-    taskIds: ["1", "2"],
-  },
-  inProgress: {
-    id: "inProgress",
-    title: "In Progress",
-    taskIds: ["3"],
-  },
-  completed: {
-    id: "completed",
-    title: "Completed",
-    taskIds: ["4"],
-  },
+type Task = Database['public']['Tables']['tasks']['Row'] & {
+  profile?: Database['public']['Tables']['profiles']['Row'];
 };
 
-const initialTasks = {
-  "1": {
-    id: "1",
-    title: "Design new landing page",
-    description: "Create a modern and engaging landing page design",
-    priority: "high",
-    dueDate: "2024-03-20",
-    assignee: "John Doe",
-  },
-  "2": {
-    id: "2",
-    title: "Update user documentation",
-    description: "Review and update the user guide",
-    priority: "medium",
-    dueDate: "2024-03-25",
-    assignee: "Jane Smith",
-  },
-  "3": {
-    id: "3",
-    title: "Fix navigation bug",
-    description: "Debug and fix the navigation menu issue",
-    priority: "high",
-    dueDate: "2024-03-18",
-    assignee: "Mike Johnson",
-  },
-  "4": {
-    id: "4",
-    title: "Optimize database queries",
-    description: "Improve database performance",
-    priority: "low",
-    dueDate: "2024-03-15",
-    assignee: "Sarah Wilson",
-  },
-};
+type TaskStatus = Database['public']['Enums']['task_status'];
 
 export const useTaskBoard = () => {
-  const [tasks, setTasks] = React.useState<TaskState>(initialTasks);
-  const [columns, setColumns] = React.useState<ColumnState>(initialColumns);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
-  const [priorityFilter, setPriorityFilter] = React.useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = React.useState<string>("all");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
-  const handleDragEnd = (result: any) => {
-    const { destination, source, draggableId } = result;
+  const columns = {
+    scheduled: { id: 'scheduled' as TaskStatus, title: "Scheduled" },
+    in_progress: { id: 'in_progress' as TaskStatus, title: "In Progress" },
+    completed: { id: 'completed' as TaskStatus, title: "Completed" },
+  };
 
-    if (!destination) return;
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          profile:profiles(*)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
+      if (error) throw error;
+      return data as Task[];
+    },
+  });
 
-    const start = columns[source.droppableId];
-    const finish = columns[destination.droppableId];
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status })
+        .eq('id', taskId);
 
-    if (start === finish) {
-      const newTaskIds = Array.from(start.taskIds);
-      newTaskIds.splice(source.index, 1);
-      newTaskIds.splice(destination.index, 0, draggableId);
-
-      const newColumn = {
-        ...start,
-        taskIds: newTaskIds,
-      };
-
-      setColumns({
-        ...columns,
-        [newColumn.id]: newColumn,
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating task",
+        description: error.message,
+        variant: "destructive",
       });
-      return;
-    }
+    },
+  });
 
-    const startTaskIds = Array.from(start.taskIds);
-    startTaskIds.splice(source.index, 1);
-    const newStart = {
-      ...start,
-      taskIds: startTaskIds,
-    };
+  const createTaskMutation = useMutation({
+    mutationFn: async (newTask: Omit<Database['public']['Tables']['tasks']['Insert'], 'id' | 'created_at' | 'updated_at'>) => {
+      const { error } = await supabase
+        .from('tasks')
+        .insert([newTask]);
 
-    const finishTaskIds = Array.from(finish.taskIds);
-    finishTaskIds.splice(destination.index, 0, draggableId);
-    const newFinish = {
-      ...finish,
-      taskIds: finishTaskIds,
-    };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setIsCreateDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error creating task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
-    setColumns({
-      ...columns,
-      [newStart.id]: newStart,
-      [newFinish.id]: newFinish,
-    });
-  };
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      if (!result.destination) return;
 
-  const handleCreateTask = (newTask: any) => {
-    const taskId = Date.now().toString();
-    setTasks({
-      ...tasks,
-      [taskId]: { ...newTask, id: taskId },
-    });
-    setColumns({
-      ...columns,
-      scheduled: {
-        ...columns.scheduled,
-        taskIds: [...columns.scheduled.taskIds, taskId],
-      },
-    });
-    setIsCreateDialogOpen(false);
-  };
+      const { draggableId: taskId, destination } = result;
+      const newStatus = destination.droppableId as TaskStatus;
 
-  const getFilteredTasks = (columnTasks: any[]) => {
-    return columnTasks.filter((task) => {
-      const matchesPriority =
-        priorityFilter === "all" || task.priority === priorityFilter;
-      const matchesAssignee =
-        assigneeFilter === "all" || task.assignee === assigneeFilter;
-      return matchesPriority && matchesAssignee;
-    });
-  };
+      updateTaskMutation.mutate({ taskId, status: newStatus });
+    },
+    [updateTaskMutation]
+  );
+
+  const handleCreateTask = useCallback(
+    (newTask: Omit<Database['public']['Tables']['tasks']['Insert'], 'id' | 'created_at' | 'updated_at'>) => {
+      createTaskMutation.mutate(newTask);
+    },
+    [createTaskMutation]
+  );
+
+  const getFilteredTasks = useCallback(
+    (columnTasks: Task[]) => {
+      return columnTasks.filter((task) => {
+        const matchesPriority =
+          priorityFilter === "all" || task.priority === priorityFilter;
+        const matchesAssignee =
+          assigneeFilter === "all" || task.profile?.name === assigneeFilter;
+        return matchesPriority && matchesAssignee;
+      });
+    },
+    [priorityFilter, assigneeFilter]
+  );
 
   const uniqueAssignees = Array.from(
-    new Set(Object.values(tasks).map((task) => task.assignee))
+    new Set(tasks.map((task) => task.profile?.name).filter(Boolean))
   );
 
   return {
-    tasks,
+    tasks: tasks.reduce((acc, task) => {
+      acc[task.id] = task;
+      return acc;
+    }, {} as Record<string, Task>),
     columns,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
@@ -179,5 +138,6 @@ export const useTaskBoard = () => {
     handleCreateTask,
     getFilteredTasks,
     uniqueAssignees,
+    isLoading,
   };
 };
