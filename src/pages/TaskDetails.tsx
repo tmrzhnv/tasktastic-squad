@@ -32,6 +32,7 @@ const TaskDetails = () => {
   const { data: task, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: async () => {
+      console.log('Fetching task details for:', taskId);
       const { data, error } = await supabase
         .from('tasks')
         .select(`
@@ -41,7 +42,11 @@ const TaskDetails = () => {
         .eq('id', taskId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching task:', error);
+        throw error;
+      }
+      console.log('Fetched task:', data);
       return data as Task;
     },
   });
@@ -60,20 +65,23 @@ const TaskDetails = () => {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (updatedTask: Partial<Database['public']['Tables']['tasks']['Update']>) => {
-      console.log('Updating task with:', updatedTask); // Debug log
+      console.log('Updating task with:', updatedTask);
       const { data, error } = await supabase
         .from('tasks')
         .update(updatedTask)
         .eq('id', taskId)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating task:', error);
+        throw error;
+      }
+      console.log('Task updated successfully:', data);
       return data;
     },
     onSuccess: () => {
-      // Invalidate both the tasks list and the individual task queries
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setIsEditing(false);
       toast({
         title: "Success",
@@ -81,7 +89,7 @@ const TaskDetails = () => {
       });
     },
     onError: (error) => {
-      console.error('Update task error:', error); // Debug log
+      console.error('Update task error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -165,7 +173,7 @@ const TaskDetails = () => {
   const handleUpdateTask = (field: string, value: string) => {
     if (!task) return;
     
-    console.log('Handling update for field:', field, 'value:', value); // Debug log
+    console.log('Handling update for field:', field, 'value:', value);
     
     const updates: Partial<Database['public']['Tables']['tasks']['Update']> = {
       [field]: value,
