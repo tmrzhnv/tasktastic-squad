@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { ArrowLeft, Trash2, Save } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import CommentList from "@/components/CommentList";
 import { Database } from "@/integrations/supabase/types";
 import {
@@ -60,14 +60,19 @@ const TaskDetails = () => {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (updatedTask: Partial<Database['public']['Tables']['tasks']['Update']>) => {
-      const { error } = await supabase
+      console.log('Updating task with:', updatedTask); // Debug log
+      const { data, error } = await supabase
         .from('tasks')
         .update(updatedTask)
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select();
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
+      // Invalidate both the tasks list and the individual task queries
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       setIsEditing(false);
       toast({
@@ -76,6 +81,7 @@ const TaskDetails = () => {
       });
     },
     onError: (error) => {
+      console.error('Update task error:', error); // Debug log
       toast({
         title: "Error",
         description: error.message,
@@ -158,6 +164,8 @@ const TaskDetails = () => {
 
   const handleUpdateTask = (field: string, value: string) => {
     if (!task) return;
+    
+    console.log('Handling update for field:', field, 'value:', value); // Debug log
     
     const updates: Partial<Database['public']['Tables']['tasks']['Update']> = {
       [field]: value,
