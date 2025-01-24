@@ -4,10 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Save } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import CommentList from "@/components/CommentList";
 import { Database } from "@/integrations/supabase/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 type Task = Database['public']['Tables']['tasks']['Row'] & {
   profile?: Database['public']['Tables']['profiles']['Row'];
@@ -19,6 +27,7 @@ const TaskDetails = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   const { data: task, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
@@ -34,6 +43,44 @@ const TaskDetails = () => {
 
       if (error) throw error;
       return data as Task;
+    },
+  });
+
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async (updatedTask: Partial<Database['public']['Tables']['tasks']['Update']>) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update(updatedTask)
+        .eq('id', taskId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -109,6 +156,16 @@ const TaskDetails = () => {
     }
   };
 
+  const handleUpdateTask = (field: string, value: string) => {
+    if (!task) return;
+    
+    const updates: Partial<Database['public']['Tables']['tasks']['Update']> = {
+      [field]: value,
+    };
+    
+    updateTaskMutation.mutate(updates);
+  };
+
   if (isTaskLoading) {
     return <div>Loading...</div>;
   }
@@ -129,36 +186,102 @@ const TaskDetails = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Tasks
           </Button>
-          <Button
-            variant="destructive"
-            className="flex items-center gap-2"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete Task
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditing(!isEditing)}
+            >
+              {isEditing ? "Cancel" : "Edit"}
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex items-center gap-2"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Task
+            </Button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h1 className="text-2xl font-semibold mb-4">{task.description}</h1>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <p className="text-gray-600">Status</p>
-              <p className="font-medium">{task.status}</p>
+              <p className="text-gray-600 mb-2">Status</p>
+              {isEditing ? (
+                <Select
+                  value={task.status}
+                  onValueChange={(value) => handleUpdateTask('status', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="font-medium">{task.status}</p>
+              )}
             </div>
             <div>
-              <p className="text-gray-600">Priority</p>
-              <p className="font-medium">{task.priority}</p>
+              <p className="text-gray-600 mb-2">Priority</p>
+              {isEditing ? (
+                <Select
+                  value={task.priority}
+                  onValueChange={(value) => handleUpdateTask('priority', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="font-medium">{task.priority}</p>
+              )}
             </div>
             <div>
-              <p className="text-gray-600">Deadline</p>
-              <p className="font-medium">
-                {new Date(task.deadline).toLocaleDateString()}
-              </p>
+              <p className="text-gray-600 mb-2">Deadline</p>
+              {isEditing ? (
+                <Input
+                  type="datetime-local"
+                  value={new Date(task.deadline).toISOString().slice(0, 16)}
+                  onChange={(e) => handleUpdateTask('deadline', new Date(e.target.value).toISOString())}
+                />
+              ) : (
+                <p className="font-medium">
+                  {new Date(task.deadline).toLocaleDateString()}
+                </p>
+              )}
             </div>
             <div>
-              <p className="text-gray-600">Assignee</p>
-              <p className="font-medium">{task.profile?.name || 'Unassigned'}</p>
+              <p className="text-gray-600 mb-2">Assignee</p>
+              {isEditing ? (
+                <Select
+                  value={task.user_id}
+                  onValueChange={(value) => handleUpdateTask('user_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles?.map((profile) => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="font-medium">{task.profile?.name || 'Unassigned'}</p>
+              )}
             </div>
           </div>
         </div>
