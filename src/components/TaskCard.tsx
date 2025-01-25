@@ -4,6 +4,7 @@ import { Calendar, User } from "lucide-react";
 import { Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
+import { CSSProperties } from "react";
 
 type Task = Database['public']['Tables']['tasks']['Row'] & {
   profile?: Database['public']['Tables']['profiles']['Row'];
@@ -31,20 +32,22 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => {
-        const style = {
+        const baseStyle: CSSProperties = {
           ...provided.draggableProps.style,
-          transform: snapshot.isDragging ? provided.draggableProps.style?.transform : provided.draggableProps.style?.transform,
+          transform: snapshot.isDragging 
+            ? provided.draggableProps.style?.transform 
+            : 'translate(0, 0)',
           zIndex: snapshot.isDragging ? 9999 : 'auto',
-          position: snapshot.isDragging ? 'fixed' : 'relative',
+          position: snapshot.isDragging ? 'fixed' as const : 'relative' as const,
         };
 
         if (snapshot.isDragging && provided.draggableProps.style) {
-          // Only add these properties when dragging
-          Object.assign(style, {
-            width: provided.draggableProps.style.width,
-            height: provided.draggableProps.style.height,
-            left: provided.draggableProps.style.left,
-            top: provided.draggableProps.style.top,
+          const draggingStyle = provided.draggableProps.style as any;
+          Object.assign(baseStyle, {
+            width: draggingStyle.width,
+            height: draggingStyle.height,
+            left: draggingStyle.left,
+            top: draggingStyle.top,
           });
         }
 
@@ -53,7 +56,7 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            style={style}
+            style={baseStyle}
           >
             <Link to={`/tasks/${task.id}`} className="block hover:no-underline">
               <Card className={`mb-4 hover:shadow-md transition-all duration-200 ${
