@@ -24,9 +24,12 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ column, tasks }) => {
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`space-y-4 min-h-[200px] transition-colors ${
-              snapshot.isDraggingOver ? "bg-gray-50/50" : ""
+            className={`space-y-4 min-h-[200px] transition-all duration-200 rounded-lg ${
+              snapshot.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/20" : ""
             }`}
+            style={{
+              minHeight: tasks.length === 0 ? '200px' : 'auto'
+            }}
           >
             {tasks.map((task, index) => (
               <TaskCard key={task.id} task={task} index={index} />

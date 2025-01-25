@@ -37,13 +37,14 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
           {...provided.dragHandleProps}
           style={{
             ...provided.draggableProps.style,
-            zIndex: snapshot.isDragging ? 1000 : 'auto'
+            transform: snapshot.isDragging ? `${provided.draggableProps.style?.transform} rotate(2deg)` : provided.draggableProps.style?.transform,
+            zIndex: snapshot.isDragging ? 9999 : 'auto',
+            position: snapshot.isDragging ? 'relative' : 'static'
           }}
-          className={snapshot.isDragging ? "rotate-[2deg]" : ""}
         >
           <Link to={`/tasks/${task.id}`} className="block hover:no-underline">
-            <Card className={`mb-4 hover:shadow-md transition-shadow ${
-              snapshot.isDragging ? "shadow-lg" : ""
+            <Card className={`mb-4 hover:shadow-md transition-all duration-200 ${
+              snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20" : ""
             }`}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
