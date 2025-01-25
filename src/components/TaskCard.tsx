@@ -30,48 +30,58 @@ const getPriorityColor = (priority: Database['public']['Enums']['task_priority']
 const TaskCard = ({ task, index }: TaskCardProps) => {
   return (
     <Draggable draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          style={{
-            ...provided.draggableProps.style,
-            transform: snapshot.isDragging ? provided.draggableProps.style?.transform : provided.draggableProps.style?.transform,
-            zIndex: snapshot.isDragging ? 9999 : 'auto',
-            position: snapshot.isDragging ? 'fixed' : 'relative',
-            width: snapshot.isDragging ? provided.draggableProps?.style?.width : 'auto',
-            height: snapshot.isDragging ? provided.draggableProps?.style?.height : 'auto',
-            left: snapshot.isDragging ? provided.draggableProps?.style?.left : 'auto',
-            top: snapshot.isDragging ? provided.draggableProps?.style?.top : 'auto'
-          }}
-        >
-          <Link to={`/tasks/${task.id}`} className="block hover:no-underline">
-            <Card className={`mb-4 hover:shadow-md transition-all duration-200 ${
-              snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20" : ""
-            }`}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-gray-900">{task.description}</h3>
-                  <Badge className={getPriorityColor(task.priority)}>
-                    {task.priority}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-gray-500 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>{task.profile?.name || 'Unassigned'}</span>
+      {(provided, snapshot) => {
+        const style = {
+          ...provided.draggableProps.style,
+          transform: snapshot.isDragging ? provided.draggableProps.style?.transform : provided.draggableProps.style?.transform,
+          zIndex: snapshot.isDragging ? 9999 : 'auto',
+          position: snapshot.isDragging ? 'fixed' : 'relative',
+        };
+
+        if (snapshot.isDragging && provided.draggableProps.style) {
+          // Only add these properties when dragging
+          Object.assign(style, {
+            width: provided.draggableProps.style.width,
+            height: provided.draggableProps.style.height,
+            left: provided.draggableProps.style.left,
+            top: provided.draggableProps.style.top,
+          });
+        }
+
+        return (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            style={style}
+          >
+            <Link to={`/tasks/${task.id}`} className="block hover:no-underline">
+              <Card className={`mb-4 hover:shadow-md transition-all duration-200 ${
+                snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20" : ""
+              }`}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-medium text-gray-900">{task.description}</h3>
+                    <Badge className={getPriorityColor(task.priority)}>
+                      {task.priority}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                  <div className="flex items-center justify-between text-gray-500 text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>{task.profile?.name || 'Unassigned'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      )}
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        );
+      }}
     </Draggable>
   );
 };
