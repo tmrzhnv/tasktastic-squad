@@ -65,3 +65,16 @@
 .priority-low {
   @apply text-green-500 border-green-200;
 }
+
+/* Add styles for drag and drop */
+[data-rbd-drag-handle-draggable-id] {
+  cursor: grab !important;
+}
+
+[data-rbd-drag-handle-draggable-id]:active {
+  cursor: grabbing !important;
+}
+
+[data-rbd-draggable-context-id] {
+  user-select: none !important;
+}

@@ -30,14 +30,21 @@ const getPriorityColor = (priority: Database['public']['Enums']['task_priority']
 const TaskCard = ({ task, index }: TaskCardProps) => {
   return (
     <Draggable draggableId={task.id} index={index}>
-      {(provided) => (
+      {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
+          style={{
+            ...provided.draggableProps.style,
+            zIndex: snapshot.isDragging ? 1000 : 'auto'
+          }}
+          className={snapshot.isDragging ? "rotate-[2deg]" : ""}
         >
           <Link to={`/tasks/${task.id}`} className="block hover:no-underline">
-            <Card className="mb-4 hover:shadow-md transition-shadow">
+            <Card className={`mb-4 hover:shadow-md transition-shadow ${
+              snapshot.isDragging ? "shadow-lg" : ""
+            }`}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-medium text-gray-900">{task.description}</h3>

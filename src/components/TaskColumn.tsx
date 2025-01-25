@@ -20,11 +20,13 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ column, tasks }) => {
     <div className="glass-panel p-4">
       <h2 className="text-lg font-semibold mb-4 text-gray-700">{column.title}</h2>
       <Droppable droppableId={column.id}>
-        {(provided) => (
+        {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="space-y-4 min-h-[200px]"
+            className={`space-y-4 min-h-[200px] transition-colors ${
+              snapshot.isDraggingOver ? "bg-gray-50/50" : ""
+            }`}
           >
             {tasks.map((task, index) => (
               <TaskCard key={task.id} task={task} index={index} />
