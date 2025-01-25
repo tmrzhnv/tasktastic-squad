@@ -37,9 +37,13 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
           {...provided.dragHandleProps}
           style={{
             ...provided.draggableProps.style,
-            transform: snapshot.isDragging ? `${provided.draggableProps.style?.transform} rotate(2deg)` : provided.draggableProps.style?.transform,
+            transform: snapshot.isDragging ? provided.draggableProps.style?.transform : provided.draggableProps.style?.transform,
             zIndex: snapshot.isDragging ? 9999 : 'auto',
-            position: snapshot.isDragging ? 'relative' : 'static'
+            position: snapshot.isDragging ? 'fixed' : 'relative',
+            width: snapshot.isDragging ? provided.draggableProps?.style?.width : 'auto',
+            height: snapshot.isDragging ? provided.draggableProps?.style?.height : 'auto',
+            left: snapshot.isDragging ? provided.draggableProps?.style?.left : 'auto',
+            top: snapshot.isDragging ? provided.draggableProps?.style?.top : 'auto'
           }}
         >
           <Link to={`/tasks/${task.id}`} className="block hover:no-underline">

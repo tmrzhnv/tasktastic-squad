@@ -69,7 +69,6 @@
 /* Add styles for drag and drop */
 [data-rbd-drag-handle-draggable-id] {
   cursor: grab !important;
-  transform: translate3d(0, 0, 0);
 }
 
 [data-rbd-drag-handle-draggable-id]:active {
@@ -78,8 +77,14 @@
 
 [data-rbd-draggable-context-id] {
   user-select: none !important;
+  pointer-events: auto !important;
 }
 
 [data-rbd-droppable-context-id] {
-  transform: translate3d(0, 0, 0);
+  position: relative;
+  z-index: 1;
+}
+
+.dragging {
+  pointer-events: auto !important;
 }
